@@ -38,8 +38,7 @@ inventory-demand-forecasting-shap/
 ├── backend/
 │   ├── app/
 │   │   ├── api/
-│   │   │   └── routes/          # forecast, reorder, chat, data, agent
-│   │   ├── agents/              # LangChain ReAct agent + tools
+│   │   │   └── routes/          # forecast, reorder, chat, data
 │   │   ├── core/                # config, logging
 │   │   ├── models/              # Pydantic schemas
 │   │   ├── pipeline/            # preprocessor, feature engineer, XGBoost
@@ -55,11 +54,9 @@ inventory-demand-forecasting-shap/
 │   ├── sample_inventory.csv     # sample dataset (3 stores, 4 products, 1 year)
 │   └── sample_inventory.json    # sample dataset in JSON format (500 rows)
 ├── scripts/
-│   └── pretrain_models.py       # pre-train all models before deployment
+│   └── pretrain_models.py
 ├── notebooks/
 │   └── inventory_forecasting.ipynb
-├── render.yaml
-├── Procfile
 └── docker-compose.yml
 ```
 
@@ -80,7 +77,7 @@ inventory-demand-forecasting-shap/
 
 ```bash
 git clone https://github.com/SHRAVANIRANE/agentic-ai-bootcamp.git
-cd agentic-ai-bootcamp/inventory-demand-forecasting-shap
+cd agentic-ai-bootcamp
 ```
 
 ### 2. Create and activate Python environment
@@ -115,11 +112,6 @@ GEMINI_MODEL=gemma-3-1b-it
 The repo includes sample datasets in `data/`. You can use either:
 - `data/sample_inventory.csv` — 4,380 rows, 3 stores, 4 products, 1 year
 - `data/sample_inventory.json` — 500 rows in JSON format
-
-To use the sample data, update `backend/app/services/data_service.py` line 12:
-```python
-_DATA_PATH = Path(__file__).parents[4] / "data" / "sample_inventory.csv"
-```
 
 ### 6. Start the backend
 
@@ -212,110 +204,6 @@ date, store_id, product_id, units_sold
 | GET | `/api/v1/data/info` | Get current dataset info |
 
 Full interactive docs at: http://localhost:8000/docs
-
----
-
-## Deploying to Render (Backend)
-
-### 1. Pre-train models locally before deploying
-
-```bash
-conda activate inventory-agent
-cd inventory-demand-forecasting-shap
-python scripts/pretrain_models.py
-```
-
-This saves trained models as `.pkl` files in `backend/models/`. Commit them before pushing.
-
-### 2. Push to GitHub
-
-```bash
-git add backend/models/
-git commit -m "add pre-trained models"
-git push
-```
-
-### 3. Create Render service
-
-1. Go to https://render.com and sign up
-2. Click **New → Web Service**
-3. Connect your GitHub repository
-4. Set the following:
-
-| Setting | Value |
-|---|---|
-| Branch | `deploy/production` |
-| Root Directory | `inventory-demand-forecasting-shap/backend` |
-| Build Command | `pip install -r requirements.txt` |
-| Start Command | `PYTHONPATH=. python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
-
-5. Add environment variables:
-
-| Key | Value |
-|---|---|
-| `GEMINI_API_KEY` | your Google AI API key |
-| `GEMINI_MODEL` | `gemma-3-1b-it` |
-
-6. Click **Deploy**
-
-Your API will be live at: `https://your-app-name.onrender.com`
-
----
-
-## Deploying to Vercel (Frontend)
-
-### 1. Update the API URL
-
-In `frontend/.env.production`, set your Render backend URL:
-```
-VITE_API_URL=https://your-app-name.onrender.com/api/v1
-```
-
-### 2. Create Vercel project
-
-1. Go to https://vercel.com and sign up
-2. Click **New Project**
-3. Import your GitHub repository
-4. Set the following:
-
-| Setting | Value |
-|---|---|
-| Branch | `deploy/production` |
-| Root Directory | `inventory-demand-forecasting-shap/frontend` |
-| Build Command | `npm run build` |
-| Output Directory | `dist` |
-
-5. Add environment variable:
-
-| Key | Value |
-|---|---|
-| `VITE_API_URL` | `https://your-app-name.onrender.com/api/v1` |
-
-6. Click **Deploy**
-
-Your frontend will be live at: `https://your-app-name.vercel.app`
-
----
-
-## Docker Deployment
-
-```bash
-docker compose up --build
-```
-
-Services:
-- Backend API on port `8000`
-- Frontend on port `3000`
-- Redis on port `6379`
-
----
-
-## Running Tests
-
-```bash
-cd backend
-PYTHONPATH=. pytest tests/ -v
-```
 
 ---
 
