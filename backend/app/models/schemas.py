@@ -27,8 +27,8 @@ class ForecastResponse(BaseModel):
 class ReorderRequest(BaseModel):
     store_id: str
     product_id: str
-    current_inventory: int
-    lead_time_days: Optional[int] = 7
+    current_inventory: int = Field(ge=0)
+    lead_time_days: Optional[int] = Field(default=7, ge=1, le=90)
 
 
 class ReorderRecommendation(BaseModel):

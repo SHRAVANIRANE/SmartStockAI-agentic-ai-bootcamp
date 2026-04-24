@@ -1,11 +1,17 @@
 import pandas as pd
+import os
 from pathlib import Path
 from app.pipeline.preprocessor import DataPreprocessor
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
 
-_DATA_PATH = Path(__file__).parents[4] / "inventory-demand-forecasting-shap" / "data" / "retail_store_inventory.csv"
+_DATA_PATH = Path(
+    os.getenv(
+        "DATA_PATH",
+        Path(__file__).parents[3] / "data" / "retail_store_inventory.csv",
+    )
+)
 
 
 class DataService:

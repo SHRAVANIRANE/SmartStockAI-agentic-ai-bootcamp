@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from app.models.schemas import ReorderRequest, ReorderRecommendation
 from app.services.reorder_service import ReorderService
 from app.api.dependencies import get_reorder_service
@@ -11,6 +11,9 @@ async def get_reorder(
     req: ReorderRequest,
     service: ReorderService = Depends(get_reorder_service),
 ) -> ReorderRecommendation:
-    return await service.recommend(
-        req.store_id, req.product_id, req.current_inventory, req.lead_time_days
-    )
+    try:
+        return await service.recommend(
+            req.store_id, req.product_id, req.current_inventory, req.lead_time_days
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc

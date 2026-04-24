@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from app.models.schemas import ForecastRequest, ForecastResponse, TrendExplanation
 from app.services.forecasting_service import ForecastingService
 from app.api.dependencies import get_forecasting_service
@@ -11,7 +11,10 @@ async def get_forecast(
     req: ForecastRequest,
     service: ForecastingService = Depends(get_forecasting_service),
 ) -> ForecastResponse:
-    return await service.forecast(req.store_id, req.product_id, req.horizon_days)
+    try:
+        return await service.forecast(req.store_id, req.product_id, req.horizon_days)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.get("/trends", response_model=TrendExplanation)
@@ -20,4 +23,7 @@ async def get_trends(
     product_id: str,
     service: ForecastingService = Depends(get_forecasting_service),
 ) -> TrendExplanation:
-    return await service.explain_trends(store_id, product_id)
+    try:
+        return await service.explain_trends(store_id, product_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc

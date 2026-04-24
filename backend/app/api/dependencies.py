@@ -15,10 +15,12 @@ def get_llm_service() -> LLMService:
     return LLMService()
 
 
+@lru_cache
 def get_forecasting_service() -> ForecastingService:
     return ForecastingService(get_data_service(), get_llm_service())
 
 
+@lru_cache
 def get_reorder_service() -> ReorderService:
     fs = get_forecasting_service()
     return ReorderService(get_data_service(), get_llm_service(), fs)
