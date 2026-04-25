@@ -59,3 +59,28 @@ class AgentChatRequest(BaseModel):
 class AgentChatResponse(BaseModel):
     response: str
     actions_taken: list[str]
+
+
+class KPIRiskRequest(BaseModel):
+    store_id: str
+    product_id: str
+    current_inventory: int
+
+
+class KPIData(BaseModel):
+    total_demand: int
+    reorder_alerts: bool
+    stock_risk: str
+    forecast_accuracy: str
+
+
+class InventoryRisk(BaseModel):
+    overstock_risk: bool
+    understock_risk: bool
+    stockout_prediction_days: int | None
+    risk_insight: str
+
+
+class KPIRiskResponse(BaseModel):
+    kpis: KPIData
+    risk: InventoryRisk

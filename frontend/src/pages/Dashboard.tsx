@@ -3,7 +3,8 @@ import ForecastChart from "../components/ForecastChart";
 import ReorderTable from "../components/ReorderTable";
 import AgentChat from "../components/AgentChat";
 import DataUpload from "../components/DataUpload";
-
+import KPICards, { KPIData } from "../components/KPICards";
+import InventoryRisk, { RiskData } from "../components/InventoryRisk";
 const API = import.meta.env.VITE_API_URL;
 
 export default function Dashboard() {
@@ -15,6 +16,10 @@ export default function Dashboard() {
   const [dataInfo, setDataInfo] = useState({ rows: 0, source: "default", totalProducts: 0 });
   const [activeTab, setActiveTab] = useState<"forecast" | "chat" | "upload">("forecast");
   const [refreshKey, setRefreshKey] = useState(0);
+
+  const [kpiData, setKpiData] = useState<KPIData | null>(null);
+  const [riskData, setRiskData] = useState<RiskData | null>(null);
+  const [kpiLoading, setKpiLoading] = useState(false);
 
   useEffect(() => {
     fetch(`${API}/forecast/stores`)
@@ -37,6 +42,30 @@ export default function Dashboard() {
       })
       .catch(() => setProducts(["P0001"]));
   }, [storeId]);
+
+  useEffect(() => {
+    if (activeTab === "forecast") {
+      setKpiLoading(true);
+      fetch(`${API}/forecast/kpi_risk`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ store_id: applied.storeId, product_id: applied.productId, current_inventory: 100 }),
+      })
+        .then(async r => {
+          if (!r.ok) {
+            const errText = await r.text();
+            throw new Error(errText || "API Error");
+          }
+          return r.json();
+        })
+        .then(data => {
+          setKpiData(data.kpis);
+          setRiskData(data.risk);
+        })
+        .catch(console.error)
+        .finally(() => setKpiLoading(false));
+    }
+  }, [applied, activeTab]);
 
   const tabs = [
     { id: "forecast", label: "Forecast" },
@@ -73,17 +102,8 @@ export default function Dashboard() {
       </nav>
 
       <div className="main">
-        {/* Stats */}
-        <div className="stats-grid">
-          {stats.map((s) => (
-            <div key={s.label} className={`stat-card ${s.cls}`}>
-              <div className="stat-value" style={{ color: s.cls === "blue" ? "var(--accent-blue)" : s.cls === "purple" ? "var(--accent-purple)" : s.cls === "green" ? "var(--accent-green)" : "var(--accent-orange)" }}>
-                {s.value}
-              </div>
-              <div className="stat-label">{s.label}</div>
-            </div>
-          ))}
-        </div>
+        {/* KPI Summary Cards */}
+        {activeTab === "forecast" && <KPICards data={kpiData} loading={kpiLoading} />}
 
         {/* Selector */}
         <div className="selector-bar">
@@ -109,10 +129,15 @@ export default function Dashboard() {
 
         {/* Content */}
         {activeTab === "forecast" && (
-          <div className="content-grid">
-            <ForecastChart storeId={applied.storeId} productId={applied.productId} />
-            <ReorderTable storeId={applied.storeId} productId={applied.productId} />
-          </div>
+          <>
+            <div className="content-grid">
+              <ForecastChart storeId={applied.storeId} productId={applied.productId} />
+              <ReorderTable storeId={applied.storeId} productId={applied.productId} />
+            </div>
+            <div style={{ marginTop: 24 }}>
+              <InventoryRisk data={riskData} loading={kpiLoading} />
+            </div>
+          </>
         )}
         {activeTab === "chat" && (
           <AgentChat storeId={applied.storeId} productId={applied.productId} />

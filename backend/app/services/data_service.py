@@ -7,12 +7,8 @@ from app.core.logging import get_logger
 logger = get_logger(__name__)
 
 # Works both locally and on Render
-_BASE = Path(__file__).parents[4]
-_DATA_PATH = (
-    _BASE / "inventory-demand-forecasting-shap" / "data" / "retail_store_inventory.csv"
-    if (_BASE / "inventory-demand-forecasting-shap" / "data" / "retail_store_inventory.csv").exists()
-    else _BASE / "data" / "retail_store_inventory.csv"
-)
+_BASE = Path(__file__).parents[3]
+_DATA_PATH = _BASE / "data" / "sample_inventory.csv"
 
 
 class DataService:
