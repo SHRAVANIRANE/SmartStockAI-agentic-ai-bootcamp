@@ -22,6 +22,7 @@ export default function AgentChat({ storeId, productId }: { storeId: string; pro
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
@@ -43,11 +44,43 @@ export default function AgentChat({ storeId, productId }: { storeId: string; pro
         body: JSON.stringify({ message, store_id: storeId, product_id: productId }),
       });
       const data = await res.json();
-      setMessages((m) => [...m, { role: "agent", text: data.response || "No response.", time: now() }]);
+      const aiResponse = data.response || "No response.";
+      setMessages((m) => [...m, { role: "agent", text: aiResponse, time: now() }]);
+      
+      // Voice synthesis
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel(); // stop current speech
+        const utterance = new SpeechSynthesisUtterance(aiResponse);
+        utterance.rate = 1.05;
+        window.speechSynthesis.speak(utterance);
+      }
+      
     } catch {
       setMessages((m) => [...m, { role: "agent", text: "Connection error. Please try again.", time: now() }]);
     }
     setLoading(false);
+  };
+
+  const startListening = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Your browser does not support Voice Recognition.");
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-US";
+    recognition.interimResults = false;
+    
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = () => setIsListening(false);
+    
+    recognition.onresult = (event: any) => {
+      const speechToText = event.results[0][0].transcript;
+      send(speechToText);
+    };
+    
+    recognition.start();
   };
 
   return (
@@ -81,13 +114,35 @@ export default function AgentChat({ storeId, productId }: { storeId: string; pro
         <div ref={bottomRef} />
       </div>
 
-      <div className="chat-input-row">
+      <div className="chat-input-row" style={{ display: "flex", gap: "8px" }}>
+        <button 
+          onClick={startListening} 
+          disabled={loading}
+          style={{ 
+            background: isListening ? "var(--accent-red)" : "var(--bg-elevated)", 
+            border: "1px solid var(--border)", 
+            color: isListening ? "white" : "var(--text-primary)", 
+            borderRadius: "50%", 
+            width: "42px", 
+            height: "42px", 
+            display: "flex", 
+            alignItems: "center", 
+            justifyContent: "center",
+            cursor: "pointer",
+            flexShrink: 0,
+            transition: "all 0.2s ease"
+          }}
+          title="Voice Assistant"
+        >
+          🎤
+        </button>
         <input className="chat-input" value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && send()}
-          placeholder="Ask about inventory, demand, or reorder decisions..." />
+          placeholder="Ask about inventory, demand, or reorder decisions..." 
+          style={{ flex: 1 }} />
         <button className="btn btn-primary" onClick={() => send()} disabled={loading}
-          style={{ padding: "10px 18px" }}>
+          style={{ padding: "10px 18px", flexShrink: 0 }}>
           Send
         </button>
       </div>

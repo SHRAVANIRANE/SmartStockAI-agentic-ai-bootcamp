@@ -14,6 +14,29 @@ export default function ReorderTable({ storeId, productId }: { storeId: string; 
   const [rec, setRec] = useState<Recommendation | null>(null);
   const [inventory, setInventory] = useState(100);
   const [loading, setLoading] = useState(false);
+  const [generatingPo, setGeneratingPo] = useState(false);
+
+  const handleGeneratePo = () => {
+    setGeneratingPo(true);
+    fetch(`${API}/reorder/generate_po`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ store_id: storeId, product_id: productId, current_inventory: inventory }),
+    })
+      .then(async (r) => {
+        if (!r.ok) throw new Error("Failed to generate PO");
+        const blob = await r.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `PO-${storeId}-${productId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+      })
+      .catch((e) => alert(e.message))
+      .finally(() => setGeneratingPo(false));
+  };
 
   const fetchReorder = () => {
     setLoading(true);
@@ -105,10 +128,19 @@ export default function ReorderTable({ storeId, productId }: { storeId: string; 
           </div>
 
           {rec.reasoning && (
-            <div className="ai-insight" style={{ borderLeftColor: "var(--accent-purple)" }}>
+            <div className="ai-insight" style={{ borderLeftColor: "var(--accent-purple)", marginBottom: 16 }}>
               <p><strong style={{ color: "var(--accent-purple)" }}>AI Reasoning:</strong> {rec.reasoning}</p>
             </div>
           )}
+
+          <button 
+            className="btn btn-secondary" 
+            onClick={handleGeneratePo} 
+            disabled={generatingPo}
+            style={{ width: "100%", padding: "12px", background: "var(--bg-elevated)", border: "1px solid var(--accent-blue)", color: "var(--accent-blue)", fontWeight: 600 }}
+          >
+            {generatingPo ? "Generating PDF..." : "📄 Generate Purchase Order (PDF)"}
+          </button>
         </>
       )}
     </div>
