@@ -22,7 +22,10 @@ export default function ReorderTable({ storeId, productId }: { storeId: string; 
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ store_id: storeId, product_id: productId, current_inventory: inventory }),
     })
-      .then((r) => r.json())
+      .then(async r => {
+        if (!r.ok) throw new Error("API Error");
+        return r.json();
+      })
       .then(setRec)
       .finally(() => setLoading(false));
   };
@@ -31,6 +34,18 @@ export default function ReorderTable({ storeId, productId }: { storeId: string; 
 
   const stockPct = rec ? Math.min(100, Math.round((inventory / (rec.reorder_point * 1.5)) * 100)) : 0;
   const stockColor = rec?.reorder_now ? "var(--accent-red)" : stockPct < 60 ? "var(--accent-orange)" : "var(--accent-green)";
+
+  let priority = "Low";
+  let priorityClass = "success";
+  if (rec) {
+    if (inventory <= rec.safety_stock) {
+      priority = "High";
+      priorityClass = "danger";
+    } else if (rec.reorder_now) {
+      priority = "Medium";
+      priorityClass = "warning";
+    }
+  }
 
   return (
     <div className="card">
@@ -55,8 +70,14 @@ export default function ReorderTable({ storeId, productId }: { storeId: string; 
         <div style={{ textAlign: "center", color: "var(--text-muted)", padding: 24, fontSize: 13 }}>Calculating...</div>
       ) : rec && (
         <>
-          <div className={`status-badge ${rec.reorder_now ? "danger" : "success"}`}>
-            {rec.reorder_now ? "REORDER NOW" : "STOCK SUFFICIENT"}
+          <div style={{ display: "flex", gap: "12px", marginBottom: "20px" }}>
+            <div className={`status-badge ${rec.reorder_now ? "danger" : "success"}`} style={{ flex: 1, marginBottom: 0 }}>
+              {rec.reorder_now ? "REORDER NOW" : "STOCK SUFFICIENT"}
+            </div>
+            <div className={`status-badge ${priorityClass}`} style={{ flex: 1, marginBottom: 0, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "2px" }}>
+              <span style={{ fontSize: 10, opacity: 0.8, fontWeight: 600 }}>PRIORITY</span>
+              <span>{priority}</span>
+            </div>
           </div>
 
           <div className="progress-bar-wrap">
