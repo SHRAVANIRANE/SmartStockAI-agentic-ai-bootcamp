@@ -3,6 +3,7 @@ import numpy as np
 import json
 from pathlib import Path
 from app.core.logging import get_logger
+from app.services.external_factors import ExternalFactorsService
 
 logger = get_logger(__name__)
 
@@ -98,7 +99,11 @@ class DataPreprocessor:
 
         df.columns = [c.lower().replace(" ", "_") for c in df.columns]
         df = df.sort_values(["store_id", "product_id", "date"]).reset_index(drop=True)
-        logger.info("Loaded %d rows after cleaning", len(df))
+        
+        # Enrich with live simulated external factors
+        df = ExternalFactorsService.enrich_data(df)
+        
+        logger.info("Loaded %d rows after cleaning and enriching", len(df))
         return df
 
     def filter_product(self, df: pd.DataFrame, store_id: str, product_id: str) -> pd.DataFrame:

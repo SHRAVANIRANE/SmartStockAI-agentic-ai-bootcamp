@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends
-from app.models.schemas import ForecastRequest, ForecastResponse, TrendExplanation, KPIRiskRequest, KPIRiskResponse, DemandPatternResponse
+from app.models.schemas import ForecastRequest, ForecastResponse, TrendExplanation, KPIRiskRequest, KPIRiskResponse, DemandPatternResponse, ExternalFactorsResponse, ExternalFactorInfo
 from app.services.forecasting_service import ForecastingService
 from app.services.data_service import DataService
+from app.services.external_factors import ExternalFactorsService
 from app.api.dependencies import get_forecasting_service, get_data_service
 
 router = APIRouter(prefix="/forecast", tags=["Forecasting"])
@@ -49,3 +50,25 @@ def get_pattern(
     service: ForecastingService = Depends(get_forecasting_service),
 ) -> DemandPatternResponse:
     return service.get_demand_pattern(store_id, product_id)
+
+
+@router.get("/external_factors", response_model=ExternalFactorsResponse)
+def get_external_factors(
+    store_id: str,
+    product_id: str,
+    data_service: DataService = Depends(get_data_service)
+) -> ExternalFactorsResponse:
+    df = data_service.get_dataframe()
+    if df.empty:
+        from datetime import date
+        start_date = date.today()
+    else:
+        start_date = df["date"].max().date()
+        
+    factors = ExternalFactorsService.get_upcoming_factors(start_date=start_date, days=7)
+    
+    return ExternalFactorsResponse(
+        store_id=store_id,
+        product_id=product_id,
+        upcoming_factors=[ExternalFactorInfo(**f) for f in factors]
+    )

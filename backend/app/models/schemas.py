@@ -101,3 +101,15 @@ class DemandPatternResponse(BaseModel):
     product_id: str
     weekly_pattern: list[DayPattern]
     monthly_pattern: list[MonthPattern]
+
+
+class ExternalFactorInfo(BaseModel):
+    date: str
+    weather: str
+    is_holiday: bool
+    competitor_undercut: bool
+
+class ExternalFactorsResponse(BaseModel):
+    store_id: str
+    product_id: str
+    upcoming_factors: list[ExternalFactorInfo]
