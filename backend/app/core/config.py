@@ -11,9 +11,9 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg://user:password@localhost:5432/inventory_db"
     REDIS_URL: str = "redis://localhost:6379"
 
-    # Ollama / LLM
-    OLLAMA_BASE_URL: str = "http://localhost:11434"
-    OLLAMA_MODEL: str = "llama3:8b-instruct-q4_0"
+    # Gemini
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemma-3-1b-it"
     LLM_TEMPERATURE: float = 0.1
 
     # Forecasting

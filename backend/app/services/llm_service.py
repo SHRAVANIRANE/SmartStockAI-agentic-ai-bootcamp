@@ -1,6 +1,6 @@
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-from langchain_ollama import OllamaLLM
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from app.core.config import get_settings
@@ -16,7 +16,7 @@ Product: {product_id} | Store: {store_id}
 Trend direction: {trend_direction}
 Average weekly demand: {avg_demand:.1f} units
 Peak demand period: {peak_period}
-Key demand drivers (SHAP): {top_drivers}
+Key demand drivers: {top_drivers}
 Seasonality pattern: {seasonality}
 
 Explain what is driving demand and what the business should watch for.
@@ -54,26 +54,38 @@ def _reorder_fallback(ctx: dict) -> str:
 
 
 class LLMService:
-    LLM_TIMEOUT = 60
-    _executor = ThreadPoolExecutor(max_workers=2)
+    LLM_TIMEOUT = 30
+    _executor = ThreadPoolExecutor(max_workers=4)
 
     def __init__(self):
         settings = get_settings()
         self._settings = settings
 
     def _make_chain(self, template: str):
-        llm = OllamaLLM(
-            model=self._settings.OLLAMA_MODEL,
-            base_url=self._settings.OLLAMA_BASE_URL,
+        llm = ChatGoogleGenerativeAI(
+            model=self._settings.GEMINI_MODEL,
+            google_api_key=self._settings.GEMINI_API_KEY,
             temperature=self._settings.LLM_TEMPERATURE,
         )
         return PromptTemplate.from_template(template) | llm | StrOutputParser()
 
     def _call_trend(self, context: dict) -> str:
-        return self._make_chain(_TREND_EXPLANATION_TEMPLATE).invoke(context)
+        for attempt in range(3):
+            try:
+                return self._make_chain(_TREND_EXPLANATION_TEMPLATE).invoke(context)
+            except Exception as e:
+                if attempt == 2:
+                    raise
+                import time; time.sleep(2)
 
     def _call_reorder(self, context: dict) -> str:
-        return self._make_chain(_REORDER_REASONING_TEMPLATE).invoke(context)
+        for attempt in range(3):
+            try:
+                return self._make_chain(_REORDER_REASONING_TEMPLATE).invoke(context)
+            except Exception as e:
+                if attempt == 2:
+                    raise
+                import time; time.sleep(2)
 
     async def explain_trend(self, context: dict) -> str:
         try:
@@ -84,10 +96,10 @@ class LLMService:
             )
             return result
         except asyncio.TimeoutError:
-            logger.warning("LLM trend timed out — using fallback")
+            logger.warning("Gemini trend timed out — using fallback")
             return _trend_fallback(context)
         except Exception as e:
-            logger.error("LLM trend failed: %s", e)
+            logger.error("Gemini trend failed: %s", e)
             return _trend_fallback(context)
 
     async def explain_reorder(self, context: dict) -> str:
@@ -99,8 +111,8 @@ class LLMService:
             )
             return result
         except asyncio.TimeoutError:
-            logger.warning("LLM reorder timed out — using fallback")
+            logger.warning("Gemini reorder timed out — using fallback")
             return _reorder_fallback(context)
         except Exception as e:
-            logger.error("LLM reorder failed: %s", e)
+            logger.error("Gemini reorder failed: %s", e)
             return _reorder_fallback(context)

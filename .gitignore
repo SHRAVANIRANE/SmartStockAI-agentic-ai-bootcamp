@@ -2,16 +2,26 @@
 __pycache__/
 *.py[cod]
 *.pyo
-.env
 *.egg-info/
 .pytest_cache/
 .venv/
 venv/
 
+# Environment files (never commit secrets)
+.env
+.env.local
+.env.production.local
+backend/.env
+
 # Node
 frontend/node_modules/
 frontend/dist/
 frontend/.env
+frontend/package-lock.json
+
+# Data (large files)
+data/*.csv
+data/*.json
 
 # Logs
 server.log
@@ -20,11 +30,11 @@ nohup.out
 
 # OS
 .DS_Store
+Thumbs.db
 
-# Models (too large for git)
+# Models
 *.pkl
 *.joblib
 *.model
-
-#CSV file
-
+backend/models/*.pkl
+backend/models/*.joblib

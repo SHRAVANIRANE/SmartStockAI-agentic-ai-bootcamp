@@ -17,10 +17,11 @@ def get_llm_service() -> LLMService:
 
 @lru_cache
 def get_forecasting_service() -> ForecastingService:
+    # Singleton — same instance reused across all requests
     return ForecastingService(get_data_service(), get_llm_service())
 
 
 @lru_cache
 def get_reorder_service() -> ReorderService:
-    fs = get_forecasting_service()
-    return ReorderService(get_data_service(), get_llm_service(), fs)
+    # Singleton — same instance reused across all requests
+    return ReorderService(get_data_service(), get_llm_service(), get_forecasting_service())

@@ -59,3 +59,78 @@ class AgentChatRequest(BaseModel):
 class AgentChatResponse(BaseModel):
     response: str
     actions_taken: list[str]
+
+
+class KPIRiskRequest(BaseModel):
+    store_id: str
+    product_id: str
+    current_inventory: int
+
+
+class KPIData(BaseModel):
+    total_demand: int
+    reorder_alerts: bool
+    stock_risk: str
+    forecast_accuracy: str
+
+
+class InventoryRisk(BaseModel):
+    overstock_risk: bool
+    understock_risk: bool
+    stockout_prediction_days: int | None
+    risk_insight: str
+
+
+class KPIRiskResponse(BaseModel):
+    kpis: KPIData
+    risk: InventoryRisk
+
+
+class DayPattern(BaseModel):
+    day: str
+    avg_demand: float
+
+
+class MonthPattern(BaseModel):
+    month: str
+    avg_demand: float
+
+
+class DemandPatternResponse(BaseModel):
+    store_id: str
+    product_id: str
+    weekly_pattern: list[DayPattern]
+    monthly_pattern: list[MonthPattern]
+
+
+class ExternalFactorInfo(BaseModel):
+    date: str
+    weather: str
+    is_holiday: bool
+    competitor_undercut: bool
+
+class ExternalFactorsResponse(BaseModel):
+    store_id: str
+    product_id: str
+    upcoming_factors: list[ExternalFactorInfo]
+
+
+class SimulationRequest(BaseModel):
+    store_id: str
+    product_id: str
+    current_inventory: int
+    price_change_pct: float = 0.0
+    discount_change_pct: float = 0.0
+    is_promotion: bool = False
+    is_festival: bool = False
+    supplier_delay_days: int = 0
+    horizon_days: int = 30
+
+
+class SimulationResponse(BaseModel):
+    store_id: str
+    product_id: str
+    baseline_forecast: list[ForecastPoint]
+    simulated_forecast: list[ForecastPoint]
+    baseline_risk: InventoryRisk
+    simulated_risk: InventoryRisk
