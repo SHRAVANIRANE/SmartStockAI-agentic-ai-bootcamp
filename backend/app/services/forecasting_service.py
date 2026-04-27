@@ -4,7 +4,7 @@ from pathlib import Path
 from app.services.data_service import DataService
 from app.services.llm_service import LLMService
 from app.pipeline.xgboost_forecaster import XGBoostForecaster
-from app.models.schemas import ForecastResponse, ForecastPoint, TrendExplanation, KPIRiskResponse, KPIData, InventoryRisk, DemandPatternResponse, DayPattern, MonthPattern
+from app.models.schemas import ForecastResponse, ForecastPoint, TrendExplanation, KPIRiskResponse, KPIData, InventoryRisk, DemandPatternResponse, DayPattern, MonthPattern, SimulationRequest, SimulationResponse
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -75,6 +75,79 @@ class ForecastingService:
             trend_summary=trend_summary,
             seasonality_notes=seasonality_notes,
         )
+
+    async def simulate(
+        self, req: SimulationRequest
+    ) -> SimulationResponse:
+        df = self.data_service.get_product_data(req.store_id, req.product_id)
+        model = await self._get_model(req.store_id, req.product_id)
+        
+        baseline_result = model.forecast(df, req.horizon_days)
+        
+        sim_params = {
+            "price_change_pct": req.price_change_pct,
+            "discount_change_pct": req.discount_change_pct,
+            "is_promotion": req.is_promotion,
+            "is_festival": req.is_festival
+        }
+        simulated_result = model.forecast(df, req.horizon_days, simulation_params=sim_params)
+
+        def make_points(res):
+            return [
+                ForecastPoint(
+                    date=d.date(),
+                    predicted_units=round(p, 2),
+                    lower_bound=round(lb, 2),
+                    upper_bound=round(ub, 2),
+                )
+                for d, p, lb, ub in zip(res.dates, res.predictions, res.lower_bounds, res.upper_bounds)
+            ]
+
+        def calculate_risk(predictions, delay_days):
+            total_demand = int(sum(predictions))
+            current_inventory = req.current_inventory
+            
+            stockout_days = None
+            remaining = current_inventory
+            for i, pred in enumerate(predictions):
+                remaining -= pred
+                if remaining <= 0:
+                    stockout_days = i + 1
+                    break
+                    
+            overstock_risk = current_inventory > (total_demand * 2)
+            understock_risk = current_inventory < (sum(predictions[:14]))
+            
+            # Delay impacts stockout risk perception
+            insight = "Healthy inventory levels detected."
+            if stockout_days:
+                adjusted_stockout = stockout_days - delay_days
+                if adjusted_stockout <= 7:
+                    insight = f"Critical! Stockout expected in ~{stockout_days} days. Supplier delay of {delay_days} days makes this highly risky."
+                else:
+                    insight = f"Stockout risk detected in {stockout_days} days."
+            elif overstock_risk:
+                insight = "Excess inventory detected. Consider promotions to reduce holding costs."
+                
+            return InventoryRisk(
+                overstock_risk=overstock_risk,
+                understock_risk=understock_risk,
+                stockout_prediction_days=stockout_days,
+                risk_insight=insight
+            )
+
+        baseline_risk = calculate_risk(baseline_result.predictions, 0)
+        simulated_risk = calculate_risk(simulated_result.predictions, req.supplier_delay_days)
+
+        return SimulationResponse(
+            store_id=req.store_id,
+            product_id=req.product_id,
+            baseline_forecast=make_points(baseline_result),
+            simulated_forecast=make_points(simulated_result),
+            baseline_risk=baseline_risk,
+            simulated_risk=simulated_risk
+        )
+
 
     async def explain_trends(self, store_id: str, product_id: str) -> TrendExplanation:
         df = self.data_service.get_product_data(store_id, product_id)

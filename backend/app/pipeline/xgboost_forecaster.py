@@ -57,7 +57,7 @@ class XGBoostForecaster:
         )
         logger.info("XGBoost trained | best_iteration=%d", self.model.best_iteration)
 
-    def forecast(self, df: pd.DataFrame, horizon_days: int) -> ForecastResult:
+    def forecast(self, df: pd.DataFrame, horizon_days: int, simulation_params: dict | None = None) -> ForecastResult:
         if self.model is None:
             raise RuntimeError("Model not trained. Call train() first.")
 
@@ -70,7 +70,7 @@ class XGBoostForecaster:
 
         for step in range(horizon_days):
             next_date = last_date + pd.Timedelta(days=step + 1)
-            row = self._build_future_row(last_row, history, next_date, step)
+            row = self._build_future_row(last_row, history, next_date, step, simulation_params)
             X_pred = pd.DataFrame([row])[self.feature_cols]
             pred = float(self.model.predict(X_pred)[0])
             pred = max(0.0, pred)
@@ -86,7 +86,7 @@ class XGBoostForecaster:
         return ForecastResult(dates, predictions, lower, upper, shap_importance)
 
     def _build_future_row(
-        self, base_row: pd.Series, history: list, date: pd.Timestamp, step: int
+        self, base_row: pd.Series, history: list, date: pd.Timestamp, step: int, simulation_params: dict | None = None
     ) -> dict:
         row = base_row.to_dict()
         row["day_of_week"] = date.dayofweek
@@ -94,6 +94,23 @@ class XGBoostForecaster:
         row["week_of_year"] = date.isocalendar()[1]
         row["quarter"] = date.quarter
         row["is_weekend"] = int(date.dayofweek >= 5)
+
+        if simulation_params:
+            if simulation_params.get("is_promotion"):
+                row["is_promotion"] = 1
+            if simulation_params.get("is_festival"):
+                row["is_promotion"] = 1  # Often maps to similar impact
+            
+            price = row.get("price", 100)
+            discount = row.get("discount", 0)
+            
+            if simulation_params.get("price_change_pct"):
+                price = price * (1 + simulation_params["price_change_pct"] / 100)
+            if simulation_params.get("discount_change_pct"):
+                discount = max(0, discount * (1 + simulation_params["discount_change_pct"] / 100))
+                
+            row["price_discount_ratio"] = discount / (price + 1e-6)
+            row["price_vs_competitor"] = price / (row.get("competitor_price", price) + 1e-6)
 
         for lag in self.feature_engineer.LAG_DAYS:
             idx = -(lag - step) if (lag - step) > 0 else -1

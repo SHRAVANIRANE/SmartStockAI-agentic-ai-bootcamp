@@ -7,6 +7,7 @@ import KPICards, { KPIData } from "../components/KPICards";
 import InventoryRisk, { RiskData } from "../components/InventoryRisk";
 import DemandPattern from "../components/DemandPattern";
 import ExternalFactors from "../components/ExternalFactors";
+import SimulationDashboard from "../components/SimulationDashboard";
 const API = import.meta.env.VITE_API_URL;
 
 export default function Dashboard() {
@@ -16,7 +17,7 @@ export default function Dashboard() {
   const [productId, setProductId] = useState("P0001");
   const [applied, setApplied] = useState({ storeId: "S001", productId: "P0001" });
   const [dataInfo, setDataInfo] = useState({ rows: 0, source: "default", totalProducts: 0 });
-  const [activeTab, setActiveTab] = useState<"forecast" | "chat" | "upload">("forecast");
+  const [activeTab, setActiveTab] = useState<"forecast" | "chat" | "upload" | "simulation">("forecast");
   const [refreshKey, setRefreshKey] = useState(0);
 
   const [kpiData, setKpiData] = useState<KPIData | null>(null);
@@ -71,6 +72,7 @@ export default function Dashboard() {
 
   const tabs = [
     { id: "forecast", label: "Forecast" },
+    { id: "simulation", label: "What-If Simulation" },
     { id: "chat", label: "AI Chat" },
     { id: "upload", label: "Data" },
   ] as const;
@@ -147,6 +149,9 @@ export default function Dashboard() {
         )}
         {activeTab === "chat" && (
           <AgentChat storeId={applied.storeId} productId={applied.productId} />
+        )}
+        {activeTab === "simulation" && (
+          <SimulationDashboard storeId={applied.storeId} productId={applied.productId} />
         )}
         {activeTab === "upload" && (
           <DataUpload onUploadSuccess={(newStores, newProducts) => {

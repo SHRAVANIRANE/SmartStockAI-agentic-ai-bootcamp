@@ -113,3 +113,24 @@ class ExternalFactorsResponse(BaseModel):
     store_id: str
     product_id: str
     upcoming_factors: list[ExternalFactorInfo]
+
+
+class SimulationRequest(BaseModel):
+    store_id: str
+    product_id: str
+    current_inventory: int
+    price_change_pct: float = 0.0
+    discount_change_pct: float = 0.0
+    is_promotion: bool = False
+    is_festival: bool = False
+    supplier_delay_days: int = 0
+    horizon_days: int = 30
+
+
+class SimulationResponse(BaseModel):
+    store_id: str
+    product_id: str
+    baseline_forecast: list[ForecastPoint]
+    simulated_forecast: list[ForecastPoint]
+    baseline_risk: InventoryRisk
+    simulated_risk: InventoryRisk
