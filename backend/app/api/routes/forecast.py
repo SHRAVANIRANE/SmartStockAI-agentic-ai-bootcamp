@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from app.models.schemas import ForecastRequest, ForecastResponse, TrendExplanation, KPIRiskRequest, KPIRiskResponse, DemandPatternResponse, ExternalFactorsResponse, ExternalFactorInfo
+from app.models.schemas import ForecastRequest, ForecastResponse, TrendExplanation, KPIRiskRequest, KPIRiskResponse, DemandPatternResponse, ExternalFactorsResponse, ExternalFactorInfo, SimulationRequest, SimulationResponse
 from app.services.forecasting_service import ForecastingService
 from app.services.data_service import DataService
 from app.services.external_factors import ExternalFactorsService
@@ -24,6 +24,14 @@ async def get_forecast(
     service: ForecastingService = Depends(get_forecasting_service),
 ) -> ForecastResponse:
     return await service.forecast(req.store_id, req.product_id, req.horizon_days)
+
+
+@router.post("/simulate", response_model=SimulationResponse)
+async def simulate_forecast(
+    req: SimulationRequest,
+    service: ForecastingService = Depends(get_forecasting_service),
+) -> SimulationResponse:
+    return await service.simulate(req)
 
 
 @router.get("/trends", response_model=TrendExplanation)
