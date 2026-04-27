@@ -17,6 +17,17 @@ Built with XGBoost for demand forecasting, LangChain for LLM workflows, FastAPI 
 - Generates purchase-order PDFs from reorder recommendations
 - Runs what-if simulations for price, discount, promotion, festival, and supplier-delay scenarios
 
+## New Features
+
+- **KPI Summary Cards**: Real-time insights into total demand, reorder alerts, stock risk, and forecast accuracy.
+- **Inventory Risk Detection**: Predicts stockout dates and flags overstock or understock scenarios.
+- **Seasonal Demand Patterns**: Shows weekly rhythms and monthly seasonality with interactive charts.
+- **External Factors**: Adds upcoming weather, holiday, and competitor-pricing signals.
+- **What-If Simulation**: Compares baseline and simulated demand under operational changes.
+- **Purchase Orders**: Generates purchase-order PDFs from reorder recommendations.
+
+---
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -34,27 +45,27 @@ Built with XGBoost for demand forecasting, LangChain for LLM workflows, FastAPI 
 
 ```text
 inventory-demand-forecasting-shap/
-├── backend/
-│   ├── app/
-│   │   ├── api/routes/        # forecast, reorder, chat, data endpoints
-│   │   ├── core/              # config, logging
-│   │   ├── models/            # Pydantic schemas
-│   │   ├── pipeline/          # preprocessor, feature engineer, XGBoost
-│   │   └── services/          # forecasting, reorder, LLM, data services
-│   ├── models/                # saved .pkl model files (gitignored)
-│   ├── tests/
-│   └── requirements.txt
-├── frontend/
-│   ├── src/
-│   │   ├── components/        # dashboard widgets and charts
-│   │   └── pages/             # Dashboard
-│   └── package.json
-├── data/
-│   └── sample_inventory.csv
-├── scripts/
-│   └── pretrain_models.py
-└── notebooks/
-    └── inventory_forecasting.ipynb
+|-- backend/
+|   |-- app/
+|   |   |-- api/routes/        # forecast, reorder, chat, data endpoints
+|   |   |-- core/              # config, logging
+|   |   |-- models/            # Pydantic schemas
+|   |   |-- pipeline/          # preprocessor, feature engineer, XGBoost
+|   |   `-- services/          # forecasting, reorder, LLM, data services
+|   |-- models/                # saved .pkl model files (gitignored)
+|   |-- tests/
+|   `-- requirements.txt
+|-- frontend/
+|   |-- src/
+|   |   |-- components/        # dashboard widgets and charts
+|   |   `-- pages/             # Dashboard
+|   `-- package.json
+|-- data/
+|   `-- sample_inventory.csv
+|-- scripts/
+|   `-- pretrain_models.py
+`-- notebooks/
+    `-- inventory_forecasting.ipynb
 ```
 
 ---
