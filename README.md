@@ -1,4 +1,4 @@
-# Inventory Demand Forecasting Agent
+# SmartStock AI - Inventory Demand Forecasting Agent
 
 A production-grade AI system that forecasts retail inventory demand, recommends optimal reorder quantities, and explains decisions in plain English using a Gemma 3 language model.
 
