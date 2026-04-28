@@ -46,7 +46,9 @@ export default function ReorderTable({
     setLoading(true);
     setError("");
 
-    postJson<Recommendation>("/reorder/", requestBody)
+    postJson<Recommendation>("/reorder/", requestBody, {
+      signal: AbortSignal.timeout(120000),
+    })
       .then(setRec)
       .catch((err: Error) => {
         setRec(null);
@@ -63,6 +65,7 @@ export default function ReorderTable({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody),
+        signal: AbortSignal.timeout(120000),
       });
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));

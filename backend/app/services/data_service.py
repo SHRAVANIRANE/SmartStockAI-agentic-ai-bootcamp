@@ -8,8 +8,32 @@ from app.pipeline.preprocessor import DataPreprocessor
 
 logger = get_logger(__name__)
 
-_BASE = Path(__file__).parents[3]
-_DATA_PATH = Path(os.getenv("DATA_PATH", _BASE / "data" / "sample_inventory.csv"))
+
+def _find_data_path() -> Path | None:
+    env_path = os.getenv("DATA_PATH")
+    if env_path:
+        path = Path(env_path)
+        if path.exists():
+            logger.info("Using data file from DATA_PATH: %s", path)
+            return path
+        logger.warning("DATA_PATH was set but does not exist: %s", path)
+
+    candidates = [
+        Path(__file__).parents[4] / "inventory-demand-forecasting-shap" / "data" / "retail_store_inventory.csv",
+        Path(__file__).parents[4] / "inventory-demand-forecasting-shap" / "data" / "sample_inventory.csv",
+        Path(__file__).parents[3] / "data" / "retail_store_inventory.csv",
+        Path(__file__).parents[3] / "data" / "sample_inventory.csv",
+        Path(__file__).parents[2] / "data" / "retail_store_inventory.csv",
+        Path(__file__).parents[2] / "data" / "sample_inventory.csv",
+    ]
+    for path in candidates:
+        if path.exists():
+            logger.info("Found data file: %s", path)
+            return path
+    return None
+
+
+_DATA_PATH = _find_data_path()
 
 
 class DataService:
@@ -20,10 +44,14 @@ class DataService:
 
     def get_dataframe(self) -> pd.DataFrame:
         if self._df is None:
+            if _DATA_PATH is None:
+                raise ValueError(
+                    "No default dataset found. Please upload a CSV or JSON file using the Data tab."
+                )
             logger.info("Loading default dataset from %s", _DATA_PATH)
             preprocessor = DataPreprocessor()
             DataService._df = preprocessor.load(_DATA_PATH)
-            DataService._source = "default"
+            DataService._source = _DATA_PATH.name
         return self._df
 
     def load_uploaded_csv(self, content: bytes, filename: str) -> dict:
@@ -64,7 +92,7 @@ class DataService:
             "rows": len(df),
             "stores": self.list_stores(),
             "products": self.list_products(),
-            "source": "default",
+            "source": DataService._source,
         }
 
     def get_product_data(self, store_id: str, product_id: str) -> pd.DataFrame:
@@ -78,7 +106,7 @@ class DataService:
     def list_products(self, store_id: str | None = None) -> list[str]:
         df = self.get_dataframe()
         if store_id:
-            df = df[df["store_id"] == store_id]
+            df = df[df["store_id"].astype(str) == str(store_id)]
         return sorted(df["product_id"].unique().tolist())
 
     @property

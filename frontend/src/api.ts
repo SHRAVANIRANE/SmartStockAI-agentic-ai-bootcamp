@@ -3,11 +3,13 @@ export const API_BASE = import.meta.env.VITE_API_URL ?? "/api/v1";
 export async function postJson<TResponse>(
   path: string,
   body: unknown,
+  init: Pick<RequestInit, "signal"> = {},
 ): Promise<TResponse> {
   const response = await fetch(`${API_BASE}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+    signal: init.signal,
   });
 
   const payload = await response.json().catch(() => ({}));

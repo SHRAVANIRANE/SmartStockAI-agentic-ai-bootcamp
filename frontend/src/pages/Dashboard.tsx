@@ -4,8 +4,11 @@ import {
   Database,
   LineChart,
   MessageSquare,
+  Package,
   Search,
   Settings2,
+  Store,
+  Table2,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import ForecastChart from "../components/ForecastChart";
@@ -17,8 +20,7 @@ import InventoryRisk, { RiskData } from "../components/InventoryRisk";
 import DemandPattern from "../components/DemandPattern";
 import ExternalFactors from "../components/ExternalFactors";
 import SimulationDashboard from "../components/SimulationDashboard";
-
-const API = import.meta.env.VITE_API_URL;
+import { API_BASE } from "../api";
 
 type TabId = "forecast" | "chat" | "upload" | "simulation";
 
@@ -28,6 +30,8 @@ const tabs: Array<{ id: TabId; label: string; icon: LucideIcon }> = [
   { id: "chat", label: "AI Chat", icon: MessageSquare },
   { id: "upload", label: "Data", icon: Database },
 ];
+
+const apiRoot = API_BASE.replace(/\/api\/v1\/?$/, "");
 
 export default function Dashboard() {
   const [stores, setStores] = useState<string[]>([]);
@@ -42,17 +46,54 @@ export default function Dashboard() {
   });
   const [activeTab, setActiveTab] = useState<TabId>("forecast");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [waking, setWaking] = useState(true);
 
   const [kpiData, setKpiData] = useState<KPIData | null>(null);
   const [riskData, setRiskData] = useState<RiskData | null>(null);
   const [kpiLoading, setKpiLoading] = useState(false);
 
   useEffect(() => {
-    fetch(`${API}/forecast/stores`)
+    let cancelled = false;
+    let retryId: number | undefined;
+
+    const ping = async () => {
+      const response = await fetch(`${apiRoot}/health`, {
+        signal: AbortSignal.timeout(90000),
+      });
+      if (!response.ok) throw new Error("Health check failed");
+    };
+
+    const wake = async () => {
+      setWaking(true);
+      try {
+        await ping();
+        if (!cancelled) setWaking(false);
+      } catch {
+        retryId = window.setTimeout(async () => {
+          try {
+            await ping();
+          } catch {
+            // Keep the app usable even if the health endpoint is still waking.
+          } finally {
+            if (!cancelled) setWaking(false);
+          }
+        }, 5000);
+      }
+    };
+
+    wake();
+    return () => {
+      cancelled = true;
+      if (retryId) window.clearTimeout(retryId);
+    };
+  }, []);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/forecast/stores`, { signal: AbortSignal.timeout(90000) })
       .then((r) => r.json())
       .then((d) => setStores(d.stores || []))
       .catch(() => setStores(["S001", "S002", "S003", "S004", "S005"]));
-    fetch(`${API}/data/info`)
+    fetch(`${API_BASE}/data/info`, { signal: AbortSignal.timeout(90000) })
       .then((r) => r.json())
       .then((d) =>
         setDataInfo({
@@ -65,7 +106,9 @@ export default function Dashboard() {
   }, [refreshKey]);
 
   useEffect(() => {
-    fetch(`${API}/forecast/products?store_id=${storeId}`)
+    fetch(`${API_BASE}/forecast/products?store_id=${storeId}`, {
+      signal: AbortSignal.timeout(90000),
+    })
       .then((r) => r.json())
       .then((d) => {
         const prods = d.products || [];
@@ -78,7 +121,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (activeTab === "forecast") {
       setKpiLoading(true);
-      fetch(`${API}/forecast/kpi_risk`, {
+      fetch(`${API_BASE}/forecast/kpi_risk`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -86,6 +129,7 @@ export default function Dashboard() {
           product_id: applied.productId,
           current_inventory: 100,
         }),
+        signal: AbortSignal.timeout(120000),
       })
         .then(async (r) => {
           if (!r.ok) {
@@ -103,6 +147,28 @@ export default function Dashboard() {
     }
   }, [applied, activeTab]);
 
+  const stats: Array<{ label: string; value: string | number; icon: LucideIcon; tone: string }> = [
+    { label: "Stores", value: stores.length || 5, icon: Store, tone: "blue" },
+    {
+      label: "Products",
+      value: dataInfo.totalProducts || products.length,
+      icon: Package,
+      tone: "purple",
+    },
+    {
+      label: "Data Rows",
+      value: dataInfo.rows ? dataInfo.rows.toLocaleString() : "73,100",
+      icon: Table2,
+      tone: "green",
+    },
+    {
+      label: "Source",
+      value: dataInfo.source === "default" ? "Default" : dataInfo.source.slice(0, 16),
+      icon: Database,
+      tone: "orange",
+    },
+  ];
+
   return (
     <div>
       <nav className="navbar">
@@ -112,9 +178,7 @@ export default function Dashboard() {
           </div>
           <div>
             <div className="navbar-title">Inventory Forecasting Agent</div>
-            <div className="navbar-subtitle">
-              XGBoost / Gemma AI / LangChain
-            </div>
+            <div className="navbar-subtitle">XGBoost / Gemma AI / LangChain</div>
           </div>
         </div>
 
@@ -136,6 +200,30 @@ export default function Dashboard() {
       </nav>
 
       <div className="main">
+        {waking && (
+          <div className="server-banner">
+            Connecting to the forecasting service. First load can take 30-60 seconds on
+            the free deployment tier.
+          </div>
+        )}
+
+        <div className="stats-grid">
+          {stats.map((stat) => {
+            const Icon = stat.icon;
+            return (
+              <div key={stat.label} className={`stat-card ${stat.tone}`}>
+                <div className="stat-icon" aria-hidden="true">
+                  <Icon size={17} strokeWidth={2.1} />
+                </div>
+                <div>
+                  <div className="stat-value">{stat.value}</div>
+                  <div className="stat-label">{stat.label}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
         {activeTab === "forecast" && (
           <KPICards data={kpiData} loading={kpiLoading} />
         )}

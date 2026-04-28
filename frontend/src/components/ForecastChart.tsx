@@ -78,11 +78,15 @@ export default function ForecastChart({
     setLoading(true);
     setError("");
 
-    postJson<ForecastResponse>("/forecast/", {
-      store_id: storeId.trim(),
-      product_id: productId.trim(),
-      horizon_days: horizon,
-    })
+    postJson<ForecastResponse>(
+      "/forecast/",
+      {
+        store_id: storeId.trim(),
+        product_id: productId.trim(),
+        horizon_days: horizon,
+      },
+      { signal: AbortSignal.timeout(120000) },
+    )
       .then((res) => {
         if (cancelled) return;
         setData(

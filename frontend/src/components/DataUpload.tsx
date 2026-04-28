@@ -6,8 +6,7 @@ import {
   RotateCcw,
   UploadCloud,
 } from "lucide-react";
-
-const API = import.meta.env.VITE_API_URL;
+import { API_BASE } from "../api";
 
 interface UploadResult {
   message: string;
@@ -15,6 +14,10 @@ interface UploadResult {
   stores: string[];
   products: string[];
   source: string;
+  column_mapping?: {
+    mapped: Record<string, string>;
+    missing: { column: string; action: string }[];
+  };
 }
 
 export default function DataUpload({
@@ -35,7 +38,11 @@ export default function DataUpload({
     const formData = new FormData();
     formData.append("file", file);
     try {
-      const res = await fetch(`${API}/data/upload`, { method: "POST", body: formData });
+      const res = await fetch(`${API_BASE}/data/upload`, {
+        method: "POST",
+        body: formData,
+        signal: AbortSignal.timeout(120000),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Upload failed");
       setResult(data);
@@ -50,18 +57,25 @@ export default function DataUpload({
   const handleReset = async () => {
     setUploading(true);
     setError("");
+    setResult(null);
     try {
-      const res = await fetch(`${API}/data/reset`, { method: "POST" });
+      const res = await fetch(`${API_BASE}/data/reset`, {
+        method: "POST",
+        signal: AbortSignal.timeout(120000),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Reset failed");
-      setResult(data);
-      onUploadSuccess(data.stores, []);
+      setResult({ ...data, column_mapping: { mapped: {}, missing: [] } });
+      onUploadSuccess(data.stores, data.products || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Reset failed");
     } finally {
       setUploading(false);
     }
   };
+
+  const mappedEntries = Object.entries(result?.column_mapping?.mapped || {});
+  const generatedFields = result?.column_mapping?.missing || [];
 
   return (
     <div className="card">
@@ -77,17 +91,20 @@ export default function DataUpload({
         </div>
       </div>
 
-      <p className="muted-text" style={{ marginBottom: 16 }}>
-        Required columns:{" "}
-        <code className="inline-code">date, store_id, product_id, units_sold</code>
-      </p>
+      <div className="upload-note">
+        <strong>Supported sources:</strong> Rossmann Store Sales, Walmart Sales,
+        Superstore Sales, M5 Forecasting, Retail Store Inventory, and company files
+        with date plus sales quantity fields.
+      </div>
 
       <label className="upload-zone">
         <UploadCloud className="upload-icon" size={34} strokeWidth={1.9} />
         <div className="upload-title">
           {uploading ? "Processing upload..." : "Click to upload CSV or JSON"}
         </div>
-        <div className="upload-hint">Supports .csv and .json files</div>
+        <div className="upload-hint">
+          Minimum required: date, store/product identifier, sales quantity
+        </div>
         <input
           type="file"
           accept=".csv,.json"
@@ -102,15 +119,42 @@ export default function DataUpload({
         Reset to default dataset
       </button>
 
-      {result && (
+      {result && result.rows > 0 && (
         <div className="upload-result">
           <div style={{ alignItems: "center", display: "flex", gap: 8 }}>
             <CheckCircle2 size={16} />
             <strong>{result.message}</strong>
           </div>
           <span style={{ color: "var(--text-secondary)", fontSize: 12 }}>
-            Stores: {result.stores.join(", ") || "Default stores"}
+            {result.stores.length} stores, {result.products?.length || 0} products
           </span>
+        </div>
+      )}
+
+      {mappedEntries.length > 0 && (
+        <div className="mapping-panel">
+          <div className="mapping-title">Column mapping detected</div>
+          <div className="mapping-grid">
+            {mappedEntries.map(([original, mapped]) => (
+              <div key={original} className="mapping-row">
+                <span className="mapping-source">{original}</span>
+                <span className="mapping-arrow">-&gt;</span>
+                <span className="mapping-target">{mapped}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {generatedFields.length > 0 && (
+        <div className="mapping-panel">
+          <div className="mapping-title">Auto-generated fields</div>
+          {generatedFields.map((field) => (
+            <div key={field.column} className="mapping-row">
+              <span className="mapping-target">{field.column}</span>
+              <span>{field.action}</span>
+            </div>
+          ))}
         </div>
       )}
 
@@ -126,13 +170,16 @@ export default function DataUpload({
       <div className="format-example">
         <div className="format-title">
           <FileJson size={15} />
-          Example formats
+          Minimum required columns
         </div>
         <div>
-          <strong>CSV:</strong> date,store_id,product_id,units_sold,price,discount
+          <strong>date</strong>: any date format
           <br />
-          <strong>JSON:</strong>{" "}
-          [{`{"date":"2024-01-01","store_id":"NYC01","product_id":"SKU001","units_sold":120}`}]
+          <strong>store_id</strong>: store or branch identifier, generated if missing
+          <br />
+          <strong>product_id</strong>: product, SKU, or item identifier
+          <br />
+          <strong>units_sold</strong>: sales quantity, demand, qty, or quantity
         </div>
       </div>
     </div>
