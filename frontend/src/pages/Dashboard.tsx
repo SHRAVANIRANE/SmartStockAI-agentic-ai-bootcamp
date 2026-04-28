@@ -1,4 +1,13 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import {
+  Boxes,
+  Database,
+  LineChart,
+  MessageSquare,
+  Search,
+  Settings2,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import ForecastChart from "../components/ForecastChart";
 import ReorderTable from "../components/ReorderTable";
 import AgentChat from "../components/AgentChat";
@@ -8,7 +17,17 @@ import InventoryRisk, { RiskData } from "../components/InventoryRisk";
 import DemandPattern from "../components/DemandPattern";
 import ExternalFactors from "../components/ExternalFactors";
 import SimulationDashboard from "../components/SimulationDashboard";
+
 const API = import.meta.env.VITE_API_URL;
+
+type TabId = "forecast" | "chat" | "upload" | "simulation";
+
+const tabs: Array<{ id: TabId; label: string; icon: LucideIcon }> = [
+  { id: "forecast", label: "Forecast", icon: LineChart },
+  { id: "simulation", label: "Simulation", icon: Settings2 },
+  { id: "chat", label: "AI Chat", icon: MessageSquare },
+  { id: "upload", label: "Data", icon: Database },
+];
 
 export default function Dashboard() {
   const [stores, setStores] = useState<string[]>([]);
@@ -16,8 +35,12 @@ export default function Dashboard() {
   const [storeId, setStoreId] = useState("S001");
   const [productId, setProductId] = useState("P0001");
   const [applied, setApplied] = useState({ storeId: "S001", productId: "P0001" });
-  const [dataInfo, setDataInfo] = useState({ rows: 0, source: "default", totalProducts: 0 });
-  const [activeTab, setActiveTab] = useState<"forecast" | "chat" | "upload" | "simulation">("forecast");
+  const [dataInfo, setDataInfo] = useState({
+    rows: 0,
+    source: "default",
+    totalProducts: 0,
+  });
+  const [activeTab, setActiveTab] = useState<TabId>("forecast");
   const [refreshKey, setRefreshKey] = useState(0);
 
   const [kpiData, setKpiData] = useState<KPIData | null>(null);
@@ -31,8 +54,14 @@ export default function Dashboard() {
       .catch(() => setStores(["S001", "S002", "S003", "S004", "S005"]));
     fetch(`${API}/data/info`)
       .then((r) => r.json())
-      .then((d) => setDataInfo({ rows: d.rows, source: d.source, totalProducts: d.total_products }))
-      .catch(() => { });
+      .then((d) =>
+        setDataInfo({
+          rows: d.rows,
+          source: d.source,
+          totalProducts: d.total_products,
+        }),
+      )
+      .catch(() => {});
   }, [refreshKey]);
 
   useEffect(() => {
@@ -52,16 +81,20 @@ export default function Dashboard() {
       fetch(`${API}/forecast/kpi_risk`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ store_id: applied.storeId, product_id: applied.productId, current_inventory: 100 }),
+        body: JSON.stringify({
+          store_id: applied.storeId,
+          product_id: applied.productId,
+          current_inventory: 100,
+        }),
       })
-        .then(async r => {
+        .then(async (r) => {
           if (!r.ok) {
             const errText = await r.text();
             throw new Error(errText || "API Error");
           }
           return r.json();
         })
-        .then(data => {
+        .then((data) => {
           setKpiData(data.kpis);
           setRiskData(data.risk);
         })
@@ -70,68 +103,88 @@ export default function Dashboard() {
     }
   }, [applied, activeTab]);
 
-  const tabs = [
-    { id: "forecast", label: "Forecast" },
-    { id: "simulation", label: "What-If Simulation" },
-    { id: "chat", label: "AI Chat" },
-    { id: "upload", label: "Data" },
-  ] as const;
-
-  const stats = [
-    { label: "Stores", value: stores.length || 5, icon: null, cls: "blue" },
-    { label: "Products", value: dataInfo.totalProducts || products.length, icon: null, cls: "purple" },
-    { label: "Data Rows", value: dataInfo.rows ? dataInfo.rows.toLocaleString() : "73,100", icon: null, cls: "green" },
-    { label: "Source", value: dataInfo.source === "default" ? "Default" : dataInfo.source.slice(0, 12), icon: null, cls: "orange" },
-  ];
-
   return (
     <div>
-      {/* Navbar */}
       <nav className="navbar">
         <div className="navbar-brand">
-          <div className="navbar-brand-icon">INV</div>
+          <div className="navbar-brand-icon" aria-hidden="true">
+            <Boxes size={21} strokeWidth={2.2} />
+          </div>
           <div>
             <div className="navbar-title">Inventory Forecasting Agent</div>
-            <div className="navbar-subtitle">XGBoost · Gemma AI · LangChain</div>
+            <div className="navbar-subtitle">
+              XGBoost / Gemma AI / LangChain
+            </div>
           </div>
         </div>
+
         <div className="nav-tabs">
-          {tabs.map((t) => (
-            <button key={t.id} className={`nav-tab ${activeTab === t.id ? "active" : "inactive"}`}
-              onClick={() => setActiveTab(t.id)}>
-              {t.label}
-            </button>
-          ))}
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                className={`nav-tab ${activeTab === tab.id ? "active" : "inactive"}`}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                <Icon size={16} strokeWidth={2.1} />
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
       </nav>
 
       <div className="main">
-        {/* KPI Summary Cards */}
-        {activeTab === "forecast" && <KPICards data={kpiData} loading={kpiLoading} />}
+        {activeTab === "forecast" && (
+          <KPICards data={kpiData} loading={kpiLoading} />
+        )}
 
-        {/* Selector */}
         <div className="selector-bar">
           <div className="selector-group">
             <label className="selector-label">Store</label>
-            <select className="selector-select" value={storeId} onChange={(e) => setStoreId(e.target.value)}>
-              {stores.map((s) => <option key={s} value={s}>{s}</option>)}
+            <select
+              className="selector-select"
+              value={storeId}
+              onChange={(e) => setStoreId(e.target.value)}
+            >
+              {stores.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
             </select>
           </div>
           <div className="selector-group">
             <label className="selector-label">Product</label>
-            <select className="selector-select" value={productId} onChange={(e) => setProductId(e.target.value)}>
-              {products.map((p) => <option key={p} value={p}>{p}</option>)}
+            <select
+              className="selector-select"
+              value={productId}
+              onChange={(e) => setProductId(e.target.value)}
+            >
+              {products.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
             </select>
           </div>
-          <button className="btn btn-primary" onClick={() => setApplied({ storeId, productId })}>
+          <button
+            className="btn btn-primary"
+            onClick={() => setApplied({ storeId, productId })}
+          >
+            <Search size={16} strokeWidth={2.2} />
             Analyze
           </button>
           <div className="analyzing-badge">
-            <span className="blue">{applied.storeId}</span> / <span className="purple">{applied.productId}</span>
+            <span className="blue">{applied.storeId}</span> /
+            <span className="purple">{applied.productId}</span>
+            <span style={{ color: "var(--text-muted)" }}>
+              {dataInfo.rows ? `${dataInfo.rows.toLocaleString()} rows` : "Dataset ready"}
+            </span>
           </div>
         </div>
 
-        {/* Content */}
         {activeTab === "forecast" && (
           <>
             <ExternalFactors storeId={applied.storeId} productId={applied.productId} />
@@ -139,32 +192,33 @@ export default function Dashboard() {
               <ForecastChart storeId={applied.storeId} productId={applied.productId} />
               <ReorderTable storeId={applied.storeId} productId={applied.productId} />
             </div>
-            <div style={{ marginTop: 24 }}>
-              <DemandPattern storeId={applied.storeId} productId={applied.productId} />
-            </div>
-            <div style={{ marginTop: 24 }}>
-              <InventoryRisk data={riskData} loading={kpiLoading} />
-            </div>
+            <DemandPattern storeId={applied.storeId} productId={applied.productId} />
+            <InventoryRisk data={riskData} loading={kpiLoading} />
           </>
         )}
+
         {activeTab === "chat" && (
           <AgentChat storeId={applied.storeId} productId={applied.productId} />
         )}
+
         {activeTab === "simulation" && (
           <SimulationDashboard storeId={applied.storeId} productId={applied.productId} />
         )}
+
         {activeTab === "upload" && (
-          <DataUpload onUploadSuccess={(newStores, newProducts) => {
-            setStores(newStores);
-            const firstStore = newStores[0] || "S001";
-            const firstProduct = newProducts[0] || "P0001";
-            setStoreId(firstStore);
-            setProductId(firstProduct);
-            setProducts(newProducts);
-            setApplied({ storeId: firstStore, productId: firstProduct });
-            setRefreshKey(k => k + 1);
-            setActiveTab("forecast");
-          }} />
+          <DataUpload
+            onUploadSuccess={(newStores, newProducts) => {
+              setStores(newStores);
+              const firstStore = newStores[0] || "S001";
+              const firstProduct = newProducts[0] || "P0001";
+              setStoreId(firstStore);
+              setProductId(firstProduct);
+              setProducts(newProducts);
+              setApplied({ storeId: firstStore, productId: firstProduct });
+              setRefreshKey((k) => k + 1);
+              setActiveTab("forecast");
+            }}
+          />
         )}
       </div>
     </div>

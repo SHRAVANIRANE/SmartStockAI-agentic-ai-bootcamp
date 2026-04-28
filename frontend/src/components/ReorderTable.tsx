@@ -1,4 +1,11 @@
 import { useEffect, useState } from "react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  FileDown,
+  PackageCheck,
+  RefreshCw,
+} from "lucide-react";
 import { API_BASE, postJson } from "../api";
 
 interface Recommendation {
@@ -103,98 +110,74 @@ export default function ReorderTable({
     }
   }
 
+  const StatusIcon = rec?.reorder_now ? AlertTriangle : CheckCircle2;
+
   return (
     <div className="card">
-      <div style={{ marginBottom: 16 }}>
-        <h3 style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>
-          Reorder Recommendation
-        </h3>
-        <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
-          {storeId} / {productId}
-        </p>
+      <div className="card-header">
+        <div>
+          <h3 className="card-title">
+            <PackageCheck size={17} strokeWidth={2.1} />
+            Reorder Recommendation
+          </h3>
+          <p className="card-subtitle">
+            {storeId} / {productId}
+          </p>
+        </div>
       </div>
 
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+      <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
         <div style={{ flex: 1 }}>
-          <label className="selector-label" style={{ display: "block", marginBottom: 5 }}>
+          <label className="selector-label" htmlFor="current-inventory">
             Current Inventory
           </label>
           <input
+            id="current-inventory"
             type="number"
             min={0}
             value={inventory}
             onChange={(event) => setInventory(Number(event.target.value))}
             className="selector-input"
-            style={{ width: "100%", minWidth: "auto" }}
+            style={{ marginTop: 7, minWidth: 0, width: "100%" }}
           />
         </div>
         <button
-          className="btn btn-primary"
+          className="btn btn-secondary"
           onClick={fetchReorder}
           disabled={loading}
-          style={{ marginTop: 20, padding: "9px 16px" }}
+          style={{ alignSelf: "flex-end" }}
         >
+          <RefreshCw size={15} strokeWidth={2.2} />
           Check
         </button>
       </div>
 
-      {error && (
-        <div
-          style={{
-            color: "var(--accent-red)",
-            fontSize: 13,
-            marginBottom: 16,
-            lineHeight: 1.5,
-          }}
-        >
-          {error}
-        </div>
-      )}
+      {error && <div className="error-text" style={{ marginBottom: 16 }}>{error}</div>}
 
       {loading ? (
-        <div
-          style={{
-            textAlign: "center",
-            color: "var(--text-muted)",
-            padding: 24,
-            fontSize: 13,
-          }}
-        >
-          Calculating...
+        <div className="center-state" style={{ minHeight: 170 }}>
+          Calculating reorder position...
         </div>
       ) : (
         rec && (
           <>
-            <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
-              <div
-                className={`status-badge ${rec.reorder_now ? "danger" : "success"}`}
-                style={{ flex: 1, marginBottom: 0 }}
-              >
-                {rec.reorder_now ? "REORDER NOW" : "STOCK SUFFICIENT"}
+            <div className="status-row">
+              <div className={`status-badge ${rec.reorder_now ? "danger" : "success"}`}>
+                <span>Status</span>
+                <div style={{ alignItems: "center", display: "flex", gap: 7 }}>
+                  <StatusIcon size={16} />
+                  {rec.reorder_now ? "Reorder Now" : "Stock Sufficient"}
+                </div>
               </div>
-              <div
-                className={`status-badge ${priorityClass}`}
-                style={{
-                  flex: 1,
-                  marginBottom: 0,
-                  fontSize: 13,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexDirection: "column",
-                  gap: 2,
-                }}
-              >
-                <span style={{ fontSize: 10, opacity: 0.8, fontWeight: 600 }}>
-                  PRIORITY
-                </span>
-                <span>{priority}</span>
+              <div className={`status-badge ${priorityClass}`}>
+                <span>Priority</span>
+                {priority}
               </div>
             </div>
 
             <div className="progress-bar-wrap">
               <div className="progress-bar-header">
-                <span>Stock Level vs Reorder Point</span>
+                <span>Stock level vs reorder point</span>
                 <span>{stockPct}%</span>
               </div>
               <div className="progress-bar-bg">
@@ -244,7 +227,7 @@ export default function ReorderTable({
               >
                 <p>
                   <strong style={{ color: "var(--accent-purple)" }}>
-                    AI Reasoning:
+                    AI reasoning:
                   </strong>{" "}
                   {rec.reasoning}
                 </p>
@@ -255,16 +238,10 @@ export default function ReorderTable({
               className="btn btn-secondary"
               onClick={handleGeneratePo}
               disabled={generatingPo}
-              style={{
-                width: "100%",
-                padding: 12,
-                background: "var(--bg-elevated)",
-                border: "1px solid var(--accent-blue)",
-                color: "var(--accent-blue)",
-                fontWeight: 600,
-              }}
+              style={{ width: "100%" }}
             >
-              {generatingPo ? "Generating PDF..." : "Generate Purchase Order PDF"}
+              <FileDown size={16} strokeWidth={2.2} />
+              {generatingPo ? "Generating PDF..." : "Generate purchase order PDF"}
             </button>
           </>
         )

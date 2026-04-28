@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { CalendarDays, LineChart } from "lucide-react";
 import {
   Area,
   CartesianGrid,
@@ -29,11 +30,12 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return (
     <div
       style={{
-        background: "var(--bg-elevated)",
-        border: "1px solid var(--border-light)",
+        background: "var(--bg-card-raised)",
+        border: "1px solid var(--border-strong)",
         borderRadius: 8,
-        padding: "10px 14px",
+        padding: "10px 12px",
         fontSize: 12,
+        boxShadow: "var(--shadow)",
       }}
     >
       <p style={{ color: "var(--text-muted)", marginBottom: 6 }}>{label}</p>
@@ -121,40 +123,39 @@ export default function ForecastChart({
 
   return (
     <div className="card">
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 16,
-          gap: 12,
-        }}
-      >
+      <div className="card-header">
         <div>
-          <h3 style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>
+          <h3 className="card-title">
+            <LineChart size={17} strokeWidth={2.1} />
             Demand Forecast
           </h3>
-          <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
+          <p className="card-subtitle">
             {storeId} / {productId}
           </p>
         </div>
-        <select
-          className="selector-select"
-          value={horizon}
-          onChange={(event) => setHorizon(Number(event.target.value))}
-          style={{ minWidth: "auto", padding: "5px 10px", fontSize: 12 }}
-        >
-          {[7, 14, 30, 60].map((days) => (
-            <option key={days} value={days}>
-              {days}d
-            </option>
-          ))}
-        </select>
+        <div className="selector-group">
+          <label className="selector-label" htmlFor="forecast-horizon">
+            Horizon
+          </label>
+          <select
+            id="forecast-horizon"
+            className="selector-select"
+            value={horizon}
+            onChange={(event) => setHorizon(Number(event.target.value))}
+            style={{ minWidth: 94 }}
+          >
+            {[7, 14, 30, 60].map((days) => (
+              <option key={days} value={days}>
+                {days} days
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="mini-stats">
         {[
-          { label: "Avg/Day", value: avg, color: "var(--accent-blue)" },
+          { label: "Avg / Day", value: avg, color: "var(--accent-blue)" },
           { label: "Peak", value: peak, color: "var(--accent-purple)" },
           { label: "Trend", value: trend, color: "var(--accent-green)" },
         ].map((stat) => (
@@ -168,44 +169,21 @@ export default function ForecastChart({
       </div>
 
       {error ? (
-        <div
-          style={{
-            minHeight: 220,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "var(--accent-red)",
-            fontSize: 13,
-            textAlign: "center",
-          }}
-        >
-          {error}
-        </div>
+        <div className="center-state error-text">{error}</div>
       ) : loading ? (
-        <div
-          style={{
-            height: 220,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "var(--text-muted)",
-            fontSize: 13,
-          }}
-        >
-          Loading forecast...
-        </div>
+        <div className="center-state">Loading forecast...</div>
       ) : (
-        <ResponsiveContainer width="100%" height={220}>
-          <ComposedChart data={data} margin={{ top: 5, right: 5, left: -15, bottom: 0 }}>
+        <ResponsiveContainer width="100%" height={236}>
+          <ComposedChart data={data} margin={{ top: 8, right: 8, left: -14, bottom: 0 }}>
             <defs>
               <linearGradient id="forecastBand" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#4f8ef7" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#4f8ef7" stopOpacity={0} />
+                <stop offset="5%" stopColor="#60a5fa" stopOpacity={0.28} />
+                <stop offset="95%" stopColor="#60a5fa" stopOpacity={0.02} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-            <XAxis dataKey="date" tick={{ fontSize: 10, fill: "var(--text-muted)" }} />
-            <YAxis tick={{ fontSize: 10, fill: "var(--text-muted)" }} />
+            <XAxis dataKey="date" tick={{ fontSize: 11, fill: "var(--text-muted)" }} />
+            <YAxis tick={{ fontSize: 11, fill: "var(--text-muted)" }} />
             <Tooltip content={<CustomTooltip />} />
             <Area
               type="monotone"
@@ -217,7 +195,7 @@ export default function ForecastChart({
             <Area
               type="monotone"
               dataKey="lower_bound"
-              fill="var(--bg-primary)"
+              fill="var(--bg-card)"
               stroke="none"
               name="Lower"
             />
@@ -236,12 +214,13 @@ export default function ForecastChart({
       {summary && !error && (
         <div className="ai-insight">
           <p>
-            <strong style={{ color: "var(--accent-blue)" }}>AI Insight:</strong>{" "}
+            <strong style={{ color: "var(--accent-blue)" }}>AI insight:</strong>{" "}
             {summary}
           </p>
           {seasonality && (
-            <p style={{ marginTop: 4, fontSize: 11, color: "var(--text-muted)" }}>
-              Seasonality: {seasonality}
+            <p style={{ marginTop: 4 }}>
+              <CalendarDays size={13} style={{ verticalAlign: "-2px" }} /> Seasonality:{" "}
+              {seasonality}
             </p>
           )}
         </div>

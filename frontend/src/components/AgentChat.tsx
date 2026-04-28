@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Bot, Circle, Mic, Send } from "lucide-react";
 import { postJson } from "../api";
 
 interface Message {
@@ -116,13 +117,14 @@ export default function AgentChat({
   return (
     <div className="chat-wrap">
       <div className="chat-header">
-        <div className="chat-avatar">AI</div>
+        <div className="chat-avatar" aria-hidden="true">
+          <Bot size={21} strokeWidth={2.2} />
+        </div>
         <div>
-          <div style={{ fontWeight: 700, fontSize: 14, color: "var(--text-primary)" }}>
-            Inventory AI Assistant
-          </div>
+          <div className="card-title">Inventory AI Assistant</div>
           <div className="chat-online">
-            Online - Gemma 3 - {storeId}/{productId}
+            <Circle size={8} fill="currentColor" />
+            Online / Gemma 3 / {storeId}/{productId}
           </div>
         </div>
       </div>
@@ -155,30 +157,15 @@ export default function AgentChat({
         <div ref={bottomRef} />
       </div>
 
-      <div className="chat-input-row" style={{ display: "flex", gap: 8 }}>
+      <div className="chat-input-row">
         <button
+          className={`icon-button ${isListening ? "listening" : ""}`}
           onClick={startListening}
           disabled={loading}
-          style={{
-            background: isListening ? "var(--accent-red)" : "var(--bg-elevated)",
-            border: "1px solid var(--border)",
-            color: isListening ? "white" : "var(--text-primary)",
-            borderRadius: "50%",
-            width: 42,
-            height: 42,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            flexShrink: 0,
-            transition: "all 0.2s ease",
-            fontSize: 11,
-            fontWeight: 700,
-          }}
           title="Voice assistant"
           aria-label="Voice assistant"
         >
-          Mic
+          <Mic size={17} strokeWidth={2.2} />
         </button>
         <input
           className="chat-input"
@@ -186,14 +173,9 @@ export default function AgentChat({
           onChange={(event) => setInput(event.target.value)}
           onKeyDown={(event) => event.key === "Enter" && send()}
           placeholder="Ask about inventory, demand, or reorder decisions..."
-          style={{ flex: 1 }}
         />
-        <button
-          className="btn btn-primary"
-          onClick={() => send()}
-          disabled={loading}
-          style={{ padding: "10px 18px", flexShrink: 0 }}
-        >
+        <button className="btn btn-primary" onClick={() => send()} disabled={loading}>
+          <Send size={16} strokeWidth={2.2} />
           Send
         </button>
       </div>

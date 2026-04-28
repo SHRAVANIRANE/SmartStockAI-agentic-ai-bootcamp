@@ -1,5 +1,15 @@
-import { useState, useEffect } from "react";
-import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { useEffect, useState } from "react";
+import {
+  CartesianGrid,
+  ComposedChart,
+  Legend,
+  Line,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { Play, ShieldAlert, SlidersHorizontal } from "lucide-react";
 
 const API = import.meta.env.VITE_API_URL;
 
@@ -27,27 +37,43 @@ interface SimulationResponse {
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-light)", borderRadius: 8, padding: "10px 14px", fontSize: 12 }}>
+    <div
+      style={{
+        background: "var(--bg-card-raised)",
+        border: "1px solid var(--border-strong)",
+        borderRadius: 8,
+        padding: "10px 12px",
+        fontSize: 12,
+        boxShadow: "var(--shadow)",
+      }}
+    >
       <p style={{ color: "var(--text-muted)", marginBottom: 6 }}>{label}</p>
       {payload.map((p: any) => (
         <p key={p.name} style={{ color: p.color, margin: "2px 0" }}>
-          {p.name}: <strong>{typeof p.value === "number" ? p.value.toFixed(1) : p.value}</strong>
+          {p.name}:{" "}
+          <strong>{typeof p.value === "number" ? p.value.toFixed(1) : p.value}</strong>
         </p>
       ))}
     </div>
   );
 };
 
-export default function SimulationDashboard({ storeId, productId }: { storeId: string; productId: string }) {
+export default function SimulationDashboard({
+  storeId,
+  productId,
+}: {
+  storeId: string;
+  productId: string;
+}) {
   const [priceChange, setPriceChange] = useState(0);
   const [discountChange, setDiscountChange] = useState(0);
   const [isPromotion, setIsPromotion] = useState(false);
   const [isFestival, setIsFestival] = useState(false);
   const [supplierDelay, setSupplierDelay] = useState(0);
-  const [horizon] = useState(30);
-
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<SimulationResponse | null>(null);
+
+  const horizon = 30;
 
   const runSimulation = () => {
     setLoading(true);
@@ -57,13 +83,13 @@ export default function SimulationDashboard({ storeId, productId }: { storeId: s
       body: JSON.stringify({
         store_id: storeId,
         product_id: productId,
-        current_inventory: 100, // Hardcoded for simulation demo
+        current_inventory: 100,
         price_change_pct: priceChange,
         discount_change_pct: discountChange,
         is_promotion: isPromotion,
         is_festival: isFestival,
         supplier_delay_days: supplierDelay,
-        horizon_days: horizon
+        horizon_days: horizon,
       }),
     })
       .then((r) => r.json())
@@ -76,97 +102,171 @@ export default function SimulationDashboard({ storeId, productId }: { storeId: s
     runSimulation();
   }, [storeId, productId]);
 
-  const chartData = data?.baseline_forecast.map((b, i) => {
-    const s = data.simulated_forecast[i];
-    return {
-      date: b.date.slice(5),
-      Baseline: b.predicted_units,
-      Simulated: s?.predicted_units || 0
-    };
-  }) || [];
+  const chartData =
+    data?.baseline_forecast.map((baseline, i) => {
+      const simulated = data.simulated_forecast[i];
+      return {
+        date: baseline.date.slice(5),
+        Baseline: baseline.predicted_units,
+        Simulated: simulated?.predicted_units || 0,
+      };
+    }) || [];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+    <div className="simulation-stack">
       <div className="card">
-        <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: 16 }}>Simulation Parameters</h3>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, alignItems: "center" }}>
-          {/* Price Change */}
+        <div className="card-header">
           <div>
-            <label style={{ display: "block", fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>
-              Price Change ({priceChange > 0 ? "+" : ""}{priceChange}%)
-            </label>
-            <input type="range" min="-50" max="50" step="5" value={priceChange} onChange={(e) => setPriceChange(Number(e.target.value))} style={{ width: "100%" }} />
+            <h3 className="card-title">
+              <SlidersHorizontal size={17} strokeWidth={2.1} />
+              Simulation Parameters
+            </h3>
+            <p className="card-subtitle">
+              Model a 30-day demand response for {storeId} / {productId}
+            </p>
           </div>
-          {/* Discount Change */}
-          <div>
-            <label style={{ display: "block", fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>
-              Additional Discount (+{discountChange}%)
+        </div>
+
+        <div className="simulation-controls">
+          <div className="range-field">
+            <label htmlFor="price-change">
+              Price change ({priceChange > 0 ? "+" : ""}
+              {priceChange}%)
             </label>
-            <input type="range" min="0" max="50" step="5" value={discountChange} onChange={(e) => setDiscountChange(Number(e.target.value))} style={{ width: "100%" }} />
+            <input
+              id="price-change"
+              type="range"
+              min="-50"
+              max="50"
+              step="5"
+              value={priceChange}
+              onChange={(e) => setPriceChange(Number(e.target.value))}
+            />
           </div>
-          {/* Supplier Delay */}
-          <div>
-            <label style={{ display: "block", fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>
-              Supplier Delay ({supplierDelay} days)
-            </label>
-            <input type="range" min="0" max="30" step="1" value={supplierDelay} onChange={(e) => setSupplierDelay(Number(e.target.value))} style={{ width: "100%" }} />
+          <div className="range-field">
+            <label htmlFor="discount-change">Additional discount (+{discountChange}%)</label>
+            <input
+              id="discount-change"
+              type="range"
+              min="0"
+              max="50"
+              step="5"
+              value={discountChange}
+              onChange={(e) => setDiscountChange(Number(e.target.value))}
+            />
           </div>
-          
-          {/* Toggles */}
-          <div style={{ display: "flex", gap: 16, gridColumn: "span 3" }}>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer", color: "var(--text-primary)" }}>
-              <input type="checkbox" checked={isPromotion} onChange={(e) => setIsPromotion(e.target.checked)} />
-              Marketing Promotion Active
+          <div className="range-field">
+            <label htmlFor="supplier-delay">Supplier delay ({supplierDelay} days)</label>
+            <input
+              id="supplier-delay"
+              type="range"
+              min="0"
+              max="30"
+              step="1"
+              value={supplierDelay}
+              onChange={(e) => setSupplierDelay(Number(e.target.value))}
+            />
+          </div>
+
+          <div className="toggle-row">
+            <label className="toggle-label">
+              <input
+                type="checkbox"
+                checked={isPromotion}
+                onChange={(e) => setIsPromotion(e.target.checked)}
+              />
+              Marketing promotion active
             </label>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer", color: "var(--text-primary)" }}>
-              <input type="checkbox" checked={isFestival} onChange={(e) => setIsFestival(e.target.checked)} />
-              Festival Season (High Traffic)
+            <label className="toggle-label">
+              <input
+                type="checkbox"
+                checked={isFestival}
+                onChange={(e) => setIsFestival(e.target.checked)}
+              />
+              Festival season
             </label>
-            <div style={{ flex: 1 }}></div>
+            <div style={{ flex: 1 }} />
             <button className="btn btn-primary" onClick={runSimulation} disabled={loading}>
-              {loading ? "Simulating..." : "Run Simulation"}
+              <Play size={16} strokeWidth={2.2} />
+              {loading ? "Simulating..." : "Run simulation"}
             </button>
           </div>
         </div>
       </div>
 
-      <div className="content-grid" style={{ gridTemplateColumns: "1fr" }}>
-        <div className="card">
-          <h3 style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", marginBottom: 16 }}>Demand Comparison (30 Days)</h3>
-          {loading && !data ? (
-            <div style={{ height: 260, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", fontSize: 13 }}>
-              Running simulation...
-            </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={260}>
-              <ComposedChart data={chartData} margin={{ top: 5, right: 5, left: -15, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="date" tick={{ fontSize: 10, fill: "var(--text-muted)" }} />
-                <YAxis tick={{ fontSize: 10, fill: "var(--text-muted)" }} />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-                <Line type="monotone" dataKey="Baseline" stroke="var(--text-muted)" strokeWidth={2} strokeDasharray="5 5" dot={false} />
-                <Line type="monotone" dataKey="Simulated" stroke="var(--accent-purple)" strokeWidth={3} dot={false} />
-              </ComposedChart>
-            </ResponsiveContainer>
-          )}
+      <div className="card">
+        <div className="card-header">
+          <div>
+            <h3 className="card-title">Demand Comparison</h3>
+            <p className="card-subtitle">Baseline vs simulated forecast over 30 days</p>
+          </div>
         </div>
+        {loading && !data ? (
+          <div className="center-state" style={{ minHeight: 260 }}>
+            Running simulation...
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={280}>
+            <ComposedChart data={chartData} margin={{ top: 8, right: 8, left: -14, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis dataKey="date" tick={{ fontSize: 11, fill: "var(--text-muted)" }} />
+              <YAxis tick={{ fontSize: 11, fill: "var(--text-muted)" }} />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend iconType="circle" wrapperStyle={{ color: "var(--text-muted)", fontSize: 12 }} />
+              <Line
+                type="monotone"
+                dataKey="Baseline"
+                stroke="var(--text-muted)"
+                strokeWidth={2}
+                strokeDasharray="5 5"
+                dot={false}
+              />
+              <Line
+                type="monotone"
+                dataKey="Simulated"
+                stroke="var(--accent-purple)"
+                strokeWidth={3}
+                dot={false}
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
+        )}
       </div>
 
       {data && (
-        <div className="content-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
-          <div className="card" style={{ borderTop: "4px solid var(--border-light)" }}>
-            <h3 style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>Baseline Risk</h3>
-            <div style={{ fontSize: 13, color: "var(--text-muted)" }}>
-              <p><strong>Stockout Prediction:</strong> {data.baseline_risk.stockout_prediction_days ? `${data.baseline_risk.stockout_prediction_days} days` : "No stockout expected"}</p>
-              <p style={{ marginTop: 8 }}><strong>Insight:</strong> {data.baseline_risk.risk_insight}</p>
+        <div className="risk-comparison-grid">
+          <div className="card border-top-muted">
+            <h3 className="card-title" style={{ marginBottom: 10 }}>
+              <ShieldAlert size={17} strokeWidth={2.1} />
+              Baseline Risk
+            </h3>
+            <div className="muted-text">
+              <p>
+                <strong>Stockout prediction:</strong>{" "}
+                {data.baseline_risk.stockout_prediction_days
+                  ? `${data.baseline_risk.stockout_prediction_days} days`
+                  : "No stockout expected"}
+              </p>
+              <p style={{ marginTop: 8 }}>
+                <strong>Insight:</strong> {data.baseline_risk.risk_insight}
+              </p>
             </div>
           </div>
-          <div className="card" style={{ borderTop: "4px solid var(--accent-purple)" }}>
-            <h3 style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>Simulated Risk</h3>
-            <div style={{ fontSize: 13, color: "var(--text-muted)" }}>
-              <p><strong>Stockout Prediction:</strong> {data.simulated_risk.stockout_prediction_days ? `${data.simulated_risk.stockout_prediction_days} days` : "No stockout expected"}</p>
-              <p style={{ marginTop: 8 }}><strong>Insight:</strong> {data.simulated_risk.risk_insight}</p>
+          <div className="card border-top-purple">
+            <h3 className="card-title" style={{ marginBottom: 10 }}>
+              <ShieldAlert size={17} strokeWidth={2.1} />
+              Simulated Risk
+            </h3>
+            <div className="muted-text">
+              <p>
+                <strong>Stockout prediction:</strong>{" "}
+                {data.simulated_risk.stockout_prediction_days
+                  ? `${data.simulated_risk.stockout_prediction_days} days`
+                  : "No stockout expected"}
+              </p>
+              <p style={{ marginTop: 8 }}>
+                <strong>Insight:</strong> {data.simulated_risk.risk_insight}
+              </p>
             </div>
           </div>
         </div>
